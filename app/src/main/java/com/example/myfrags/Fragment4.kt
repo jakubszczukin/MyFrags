@@ -1,59 +1,85 @@
 package com.example.myfrags
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
 
-/**
- * A simple [Fragment] subclass.
- * Use the [Fragment4.newInstance] factory method to
- * create an instance of this fragment.
- */
 class Fragment4 : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+
+    //1.
+    private var fragsData: FragsData? = null
+    private var numberObserver: Observer<Int>? = null
+    var keyDel = false
+
+    //2.
+    private var edit: EditText? = null
+    private var textWatcher: TextWatcher? = null
+    private var turnOffWatcher = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
     }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_4, container, false)
-    }
+        val view: View = inflater.inflate(com.example.myfrags.R.layout.fragment_4, container, false)
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment Fragment4.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            Fragment4().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
+        //1.
+        edit = view.findViewById(com.example.myfrags.R.id.editTextNumber)
+        edit!!.setSelection(edit!!.text.length)
+
+        edit!!.setOnKeyListener { v, keyCode, event ->
+            keyDel = keyCode == KeyEvent.KEYCODE_DEL
+            false
+        }
+
+        //2.
+        fragsData = ViewModelProvider(requireActivity()).get(FragsData::class.java)
+
+        //3.
+        numberObserver = Observer { newInteger ->
+            turnOffWatcher = true
+            edit!!.setText(newInteger.toString())
+        }
+
+        //4.
+        fragsData!!.counter.observe(viewLifecycleOwner, numberObserver!!)
+
+        //5.
+        textWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable) {
+                if (!turnOffWatcher) {
+                    val i: Int? = try {
+                        s.toString().toInt()
+                    } catch (e: NumberFormatException) {
+                        fragsData!!.counter.value
+                    }
+                    if(fragsData!!.counter.value in 1..9 && keyDel)
+                        fragsData!!.counter.value = 0
+                    else
+                        fragsData!!.counter.value = i
+                } else {
+                    turnOffWatcher = !turnOffWatcher
                 }
+                edit!!.setSelection(edit!!.text.length)
             }
+        }
+
+        //6.
+        edit!!.addTextChangedListener(textWatcher)
+        return view
     }
 }
